@@ -38,6 +38,7 @@ namespace MSMQExplorer
         }
         #endregion
 
+
         #region RefreshQueuesTree
         private void RefreshQueuesTree()
         {
@@ -175,6 +176,7 @@ namespace MSMQExplorer
                 n.ImageIndex = n.SelectedImageIndex = 5;
                 n.Tag = JournalQueue;
                 n.Name = JournalQueue.FormatName;
+                n.Nodes.Add(new TreeNode("loading...") { Name = "dummy" });
                 node.Nodes.Add(n);
             }
 
@@ -184,6 +186,7 @@ namespace MSMQExplorer
                 n.ImageIndex = n.SelectedImageIndex = 6;
                 n.Tag = DeadLetterQueue;
                 n.Name = DeadLetterQueue.FormatName;
+                n.Nodes.Add(new TreeNode("loading...") { Name = "dummy" });
                 node.Nodes.Add(n);
             }
 
@@ -193,6 +196,7 @@ namespace MSMQExplorer
                 n.ImageIndex = n.SelectedImageIndex = 6;
                 n.Tag = TransactionalDeadLetterQueue;
                 n.Name = TransactionalDeadLetterQueue.FormatName;
+                n.Nodes.Add(new TreeNode("loading...") { Name = "dummy" });
                 node.Nodes.Add(n);
             }
 
@@ -465,162 +469,183 @@ namespace MSMQExplorer
         }
         #endregion
 
+        #region RenderMessage
+        private void RenderMessage(System.Messaging.Message m)
+        {
+            var doc = ConvertMessageToXMLDoc(m);
+            if (doc != null)
+            {
+                MessageEditor.ConfigurationManager.Language = "xml";
+                MessageEditor.Text = ToString(doc);
+            }
+            else
+            {
+                MessageEditor.ConfigurationManager.Language = "";
+                m.BodyStream.Position = 0;
+                MessageEditor.Text = new StreamReader(m.BodyStream).ReadToEnd();
+            }
+        }
+        #endregion
+
         #region RefreshButton_Click
         private void RefreshButton_Click(object sender, EventArgs e)
         {
-            ReloadQueues(ServerName.Text);
-            RefreshQueuesTree();
+            try
+            {
+                ReloadQueues(ServerName.Text);
+                RefreshQueuesTree();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         #endregion
 
         #region QueuesTree_AfterSelect
         private void QueuesTree_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            var sn = e.Node;
-            SelectedPath = new List<string>();
-            while (sn != null)
-            {
-                var key = sn.Name;
-                if (string.IsNullOrWhiteSpace(key)) key = sn.Text;
-
-                if (!string.IsNullOrWhiteSpace(key)) SelectedPath.Add(key);
-
-                sn = sn.Parent;
-            }
-
-            MessagesList.BeginUpdate();
             try
             {
-                MessagesList.Items.Clear();
-                MessagesList.Columns.Clear();
-
-                MessageEditor.IsReadOnly = false;
-                MessageEditor.Scrolling.ScrollBy(-1, -1);
-                MessageEditor.Text = "";
-
-                if (e.Node == null) return;
-
-                if (e.Node.Tag is System.Messaging.Message)
+                var sn = e.Node;
+                SelectedPath = new List<string>();
+                while (sn != null)
                 {
-                    var m = e.Node.Tag as System.Messaging.Message;
+                    var key = sn.Name;
+                    if (string.IsNullOrWhiteSpace(key)) key = sn.Text;
 
-                    var doc = ConvertMessageToXMLDoc(m);
-                    if (doc != null)
+                    if (!string.IsNullOrWhiteSpace(key)) SelectedPath.Add(key);
+
+                    sn = sn.Parent;
+                }
+
+                MessagesList.BeginUpdate();
+                try
+                {
+                    MessagesList.Items.Clear();
+                    MessagesList.Columns.Clear();
+
+                    MessageEditor.IsReadOnly = false;
+                    MessageEditor.Scrolling.ScrollBy(-1, -1);
+                    MessageEditor.Text = "";
+
+                    if (e.Node == null) return;
+
+                    if (e.Node.Tag is System.Messaging.Message)
                     {
-                        MessageEditor.ConfigurationManager.Language = "xml";
-                        MessageEditor.Text = ToString(doc);
+                        var m = e.Node.Tag as System.Messaging.Message;
+
+                        RenderMessage(m);
+
+                        MessageEditor.Refresh();
+
+                        MessagesList.Columns.Add(new ColumnHeader() { Text = "Name" });
+                        MessagesList.Columns.Add(new ColumnHeader() { Text = "Value" });
+
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "AcknowledgeType", Convert.ToString(m.AcknowledgeType) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "ArrivedTime", Convert.ToString(m.ArrivedTime) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "Authenticated", Convert.ToString(m.Authenticated) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "BodyLength", Convert.ToString(m.BodyStream.Length) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "MessageId", Convert.ToString(m.Id) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "Label", Convert.ToString(m.Label) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "MessageType", Convert.ToString(m.MessageType) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "Priority", Convert.ToString(m.Priority) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "Recoverable", Convert.ToString(m.Recoverable) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "SentTime", Convert.ToString(m.SentTime) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "TimeToBeReceived", Convert.ToString(m.TimeToBeReceived) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "TimeToReachQueue", Convert.ToString(m.TimeToReachQueue) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "UseAuthentication", Convert.ToString(m.UseAuthentication) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "UseDeadLetterQueue", Convert.ToString(m.UseDeadLetterQueue) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "UseEncryption", Convert.ToString(m.UseEncryption) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "UseJournalQueue", Convert.ToString(m.UseJournalQueue) }));
+                        MessagesList.Items.Add(new ListViewItem(new string[] { "UseTracing", Convert.ToString(m.UseTracing) }));
+
+
+
+                        MessagesList.Columns[0].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+                        MessagesList.Columns[1].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+                    }
+                    else if (string.IsNullOrWhiteSpace(e.Node.Name))
+                    {
+
+                        MessagesList.Columns.Add(new ColumnHeader() { Text = "Name" });
+                        MessagesList.Columns.Add(new ColumnHeader() { Text = "Number of Messages" });
+
+                        foreach (TreeNode n in e.Node.Nodes)
+                        {
+                            var mq = n.Tag as MessageQueue;
+
+                            var li = new ListViewItem();
+                            li.Tag = mq;
+                            li.Text = n.Text;
+                            li.ImageIndex = n.ImageIndex;
+
+                            if (mq != null)
+                            {
+                                try
+                                {
+                                    li.SubItems.Add(new ListViewItem.ListViewSubItem(li, GetMessageCount(mq).ToString()));
+                                }
+                                catch (Exception ex)
+                                {
+                                    li.SubItems.Add(new ListViewItem.ListViewSubItem(li, ex.Message) { ForeColor = Color.Red });
+                                }
+                            }
+
+                            MessagesList.Items.Add(li);
+                        }
+
+                        MessagesList.Columns[0].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+                        MessagesList.Columns[1].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+                        if (MessagesList.Columns[1].Width < 60) MessagesList.Columns[1].Width = 60;
+                        else if (MessagesList.Columns[1].Width > 500) MessagesList.Columns[1].Width = 500;
                     }
                     else
                     {
-                        MessageEditor.ConfigurationManager.Language = "";
-                        m.BodyStream.Position = 0;
-                        MessageEditor.Text = new StreamReader(m.BodyStream).ReadToEnd();
-                    }
+                        EnsureNodeLoaded(e.Node);
 
-                    MessageEditor.Refresh();
+                        MessagesList.Columns.Add(new ColumnHeader() { Text = "Label" });
+                        MessagesList.Columns.Add(new ColumnHeader() { Text = "Size" });
 
-                    MessagesList.Columns.Add(new ColumnHeader() { Text = "Name" });
-                    MessagesList.Columns.Add(new ColumnHeader() { Text = "Value" });
-                    
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "AcknowledgeType", Convert.ToString(m.AcknowledgeType) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "ArrivedTime", Convert.ToString(m.ArrivedTime) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "Authenticated", Convert.ToString(m.Authenticated) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "BodyLength", Convert.ToString(m.BodyStream.Length) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "MessageId", Convert.ToString(m.Id) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "Label", Convert.ToString(m.Label) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "MessageType", Convert.ToString(m.MessageType) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "Priority", Convert.ToString(m.Priority) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "Recoverable", Convert.ToString(m.Recoverable) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "SentTime", Convert.ToString(m.SentTime) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "TimeToBeReceived", Convert.ToString(m.TimeToBeReceived) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "TimeToReachQueue", Convert.ToString(m.TimeToReachQueue) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "UseAuthentication", Convert.ToString(m.UseAuthentication) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "UseDeadLetterQueue", Convert.ToString(m.UseDeadLetterQueue) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "UseEncryption", Convert.ToString(m.UseEncryption) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "UseJournalQueue", Convert.ToString(m.UseJournalQueue) }));
-                    MessagesList.Items.Add(new ListViewItem(new string[] { "UseTracing", Convert.ToString(m.UseTracing) }));
-
-
-
-                    MessagesList.Columns[0].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
-                    MessagesList.Columns[1].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
-                }
-                else if (string.IsNullOrWhiteSpace(e.Node.Name))
-                {
-
-                    MessagesList.Columns.Add(new ColumnHeader() { Text = "Name" });
-                    MessagesList.Columns.Add(new ColumnHeader() { Text = "Number of Messages" });
-
-                    foreach (TreeNode n in e.Node.Nodes)
-                    {
-                        var mq = n.Tag as MessageQueue;
-
-                        var li = new ListViewItem();
-                        li.Tag = mq;
-                        li.Text = n.Text;
-                        li.ImageIndex = n.ImageIndex;
-
-                        if (mq != null)
+                        foreach (TreeNode n in e.Node.Nodes)
                         {
-                            try
+                            var m = n.Tag as System.Messaging.Message;
+
+                            var li = new ListViewItem();
+                            li.Tag = n;
+                            li.Text = n.Text;
+                            li.ImageIndex = n.ImageIndex;
+
+                            if (m != null)
                             {
-                                li.SubItems.Add(new ListViewItem.ListViewSubItem(li, GetMessageCount(mq).ToString()));
+                                try
+                                {
+                                    li.SubItems.Add(new ListViewItem.ListViewSubItem(li, m.BodyStream.Length.ToString()));
+                                }
+                                catch (Exception ex)
+                                {
+                                    li.SubItems.Add(new ListViewItem.ListViewSubItem(li, ex.Message) { ForeColor = Color.Red });
+                                }
                             }
-                            catch (Exception ex)
-                            {
-                                li.SubItems.Add(new ListViewItem.ListViewSubItem(li, ex.Message) { ForeColor = Color.Red });
-                            }
+
+                            MessagesList.Items.Add(li);
                         }
 
-                        MessagesList.Items.Add(li);
+                        MessagesList.Columns[0].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+                        MessagesList.Columns[1].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
+                        if (MessagesList.Columns[1].Width < 60) MessagesList.Columns[1].Width = 60;
+                        else if (MessagesList.Columns[1].Width > 500) MessagesList.Columns[1].Width = 500;
                     }
-
-                    MessagesList.Columns[0].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
-                    MessagesList.Columns[1].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
-                    if (MessagesList.Columns[1].Width < 60) MessagesList.Columns[1].Width = 60;
-                    else if (MessagesList.Columns[1].Width > 500) MessagesList.Columns[1].Width = 500;
                 }
-                else
+                finally
                 {
-                    EnsureNodeLoaded(e.Node);
-
-                    MessagesList.Columns.Add(new ColumnHeader() { Text = "Label" });
-                    MessagesList.Columns.Add(new ColumnHeader() { Text = "Size" });
-
-                    foreach (TreeNode n in e.Node.Nodes)
-                    {
-                        var m = n.Tag as System.Messaging.Message;
-
-                        var li = new ListViewItem();
-                        li.Tag = n;
-                        li.Text = n.Text;
-                        li.ImageIndex = n.ImageIndex;
-
-                        if (m != null)
-                        {
-                            try
-                            {
-                                li.SubItems.Add(new ListViewItem.ListViewSubItem(li, m.BodyStream.Length.ToString()));
-                            }
-                            catch (Exception ex)
-                            {
-                                li.SubItems.Add(new ListViewItem.ListViewSubItem(li, ex.Message) { ForeColor = Color.Red });
-                            }
-                        }
-
-                        MessagesList.Items.Add(li);
-                    }
-
-                    MessagesList.Columns[0].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
-                    MessagesList.Columns[1].AutoResize(ColumnHeaderAutoResizeStyle.ColumnContent);
-                    if (MessagesList.Columns[1].Width < 60) MessagesList.Columns[1].Width = 60;
-                    else if (MessagesList.Columns[1].Width > 500) MessagesList.Columns[1].Width = 500;
+                    MessagesList.EndUpdate();
+                    MessageEditor.IsReadOnly = true;
                 }
             }
-            finally
+            catch (Exception ex)
             {
-                MessagesList.EndUpdate();
-                MessageEditor.IsReadOnly = true;
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         #endregion
@@ -628,23 +653,66 @@ namespace MSMQExplorer
         #region QueuesTree_BeforeExpand
         private void QueuesTree_BeforeExpand(object sender, TreeViewCancelEventArgs e)
         {
-            EnsureNodeLoaded(e.Node);
+            try
+            {
+                EnsureNodeLoaded(e.Node);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         #endregion
 
         #region MessagesList_DoubleClick
         private void MessagesList_DoubleClick(object sender, EventArgs e)
         {
-            if (MessagesList.SelectedItems.Count == 0) return;
+            try
+            {
+                if (MessagesList.SelectedItems.Count == 0) return;
 
-            var li = MessagesList.SelectedItems[0];
-            var node = li.Tag as TreeNode;
-            if (node == null) return;
+                var li = MessagesList.SelectedItems[0];
+                var node = li.Tag as TreeNode;
+                if (node == null) return;
 
-            QueuesTree.SelectedNode = node;
-            QueuesTree.Focus();
-
+                QueuesTree.SelectedNode = node;
+                QueuesTree.Focus();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         #endregion
+
+        private void MessagesList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (MessagesList.SelectedItems.Count == 0) return;
+
+                var li = MessagesList.SelectedItems[0];
+                var node = li.Tag as TreeNode;
+                if (node == null) return;
+
+                MessageEditor.IsReadOnly = false;
+                try
+                {
+                    MessageEditor.Scrolling.ScrollBy(-1, -1);
+                    MessageEditor.Text = "";
+
+                    var m = node.Tag as System.Messaging.Message;
+                    if (m != null) RenderMessage(m);
+                }
+                finally
+                {
+                    MessageEditor.IsReadOnly = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
     }
 }

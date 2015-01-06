@@ -133,6 +133,7 @@
             this.MessagesList.TabIndex = 0;
             this.MessagesList.UseCompatibleStateImageBehavior = false;
             this.MessagesList.View = System.Windows.Forms.View.Details;
+            this.MessagesList.SelectedIndexChanged += new System.EventHandler(this.MessagesList_SelectedIndexChanged);
             this.MessagesList.DoubleClick += new System.EventHandler(this.MessagesList_DoubleClick);
             // 
             // MessageEditor
