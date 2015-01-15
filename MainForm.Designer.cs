@@ -33,15 +33,29 @@
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.QueuesTree = new System.Windows.Forms.TreeView();
+            this.ContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.purgeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pasteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.createToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.newToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.removeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.Images = new System.Windows.Forms.ImageList(this.components);
             this.MessagesList = new System.Windows.Forms.ListView();
             this.MessageEditor = new ScintillaNET.Scintilla();
             this.StatusBar = new System.Windows.Forms.StatusStrip();
+            this.SelectedQueuePath = new System.Windows.Forms.ToolStripStatusLabel();
+            this.SelectedMessageText = new System.Windows.Forms.ToolStripStatusLabel();
+            this.ProgressBar = new System.Windows.Forms.ToolStripProgressBar();
             this.ToolBar = new System.Windows.Forms.ToolStrip();
             this.toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
             this.ServerName = new System.Windows.Forms.ToolStripTextBox();
             this.RefreshButton = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.Help = new System.Windows.Forms.ToolStripButton();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -50,7 +64,9 @@
             this.splitContainer2.Panel1.SuspendLayout();
             this.splitContainer2.Panel2.SuspendLayout();
             this.splitContainer2.SuspendLayout();
+            this.ContextMenu.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.MessageEditor)).BeginInit();
+            this.StatusBar.SuspendLayout();
             this.ToolBar.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -94,6 +110,7 @@
             // QueuesTree
             // 
             this.QueuesTree.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.QueuesTree.ContextMenuStrip = this.ContextMenu;
             this.QueuesTree.Dock = System.Windows.Forms.DockStyle.Fill;
             this.QueuesTree.HideSelection = false;
             this.QueuesTree.ImageIndex = 0;
@@ -105,6 +122,82 @@
             this.QueuesTree.TabIndex = 0;
             this.QueuesTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.QueuesTree_BeforeExpand);
             this.QueuesTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.QueuesTree_AfterSelect);
+            this.QueuesTree.MouseDown += new System.Windows.Forms.MouseEventHandler(this.QueuesTree_MouseDown);
+            // 
+            // ContextMenu
+            // 
+            this.ContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.purgeToolStripMenuItem,
+            this.cutToolStripMenuItem,
+            this.copyToolStripMenuItem,
+            this.pasteToolStripMenuItem,
+            this.toolStripSeparator2,
+            this.createToolStripMenuItem,
+            this.deleteToolStripMenuItem,
+            this.newToolStripMenuItem,
+            this.removeToolStripMenuItem});
+            this.ContextMenu.Name = "ContextMenu";
+            this.ContextMenu.Size = new System.Drawing.Size(153, 208);
+            this.ContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenu_Opening);
+            // 
+            // purgeToolStripMenuItem
+            // 
+            this.purgeToolStripMenuItem.Name = "purgeToolStripMenuItem";
+            this.purgeToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.purgeToolStripMenuItem.Text = "Purge";
+            this.purgeToolStripMenuItem.Click += new System.EventHandler(this.purgeToolStripMenuItem_Click);
+            // 
+            // cutToolStripMenuItem
+            // 
+            this.cutToolStripMenuItem.Name = "cutToolStripMenuItem";
+            this.cutToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.cutToolStripMenuItem.Text = "Cut";
+            this.cutToolStripMenuItem.Click += new System.EventHandler(this.cutToolStripMenuItem_Click);
+            // 
+            // copyToolStripMenuItem
+            // 
+            this.copyToolStripMenuItem.Name = "copyToolStripMenuItem";
+            this.copyToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.copyToolStripMenuItem.Text = "Copy";
+            this.copyToolStripMenuItem.Click += new System.EventHandler(this.copyToolStripMenuItem_Click);
+            // 
+            // pasteToolStripMenuItem
+            // 
+            this.pasteToolStripMenuItem.Name = "pasteToolStripMenuItem";
+            this.pasteToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.pasteToolStripMenuItem.Text = "Paste";
+            this.pasteToolStripMenuItem.Click += new System.EventHandler(this.pasteToolStripMenuItem_Click);
+            // 
+            // toolStripSeparator2
+            // 
+            this.toolStripSeparator2.Name = "toolStripSeparator2";
+            this.toolStripSeparator2.Size = new System.Drawing.Size(149, 6);
+            // 
+            // createToolStripMenuItem
+            // 
+            this.createToolStripMenuItem.Name = "createToolStripMenuItem";
+            this.createToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.createToolStripMenuItem.Text = "Create";
+            // 
+            // deleteToolStripMenuItem
+            // 
+            this.deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
+            this.deleteToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.deleteToolStripMenuItem.Text = "Delete";
+            this.deleteToolStripMenuItem.Click += new System.EventHandler(this.deleteToolStripMenuItem_Click);
+            // 
+            // newToolStripMenuItem
+            // 
+            this.newToolStripMenuItem.Name = "newToolStripMenuItem";
+            this.newToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.newToolStripMenuItem.Text = "New";
+            // 
+            // removeToolStripMenuItem
+            // 
+            this.removeToolStripMenuItem.Name = "removeToolStripMenuItem";
+            this.removeToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.removeToolStripMenuItem.Text = "Remove";
+            this.removeToolStripMenuItem.Click += new System.EventHandler(this.removeToolStripMenuItem_Click);
             // 
             // Images
             // 
@@ -167,11 +260,42 @@
             // 
             // StatusBar
             // 
+            this.StatusBar.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.SelectedQueuePath,
+            this.SelectedMessageText,
+            this.ProgressBar});
             this.StatusBar.Location = new System.Drawing.Point(0, 503);
             this.StatusBar.Name = "StatusBar";
             this.StatusBar.Size = new System.Drawing.Size(876, 22);
             this.StatusBar.TabIndex = 1;
             this.StatusBar.Text = "statusStrip1";
+            // 
+            // SelectedQueuePath
+            // 
+            this.SelectedQueuePath.Image = global::MSMQExplorer.Properties.Resources.Messages_002;
+            this.SelectedQueuePath.Margin = new System.Windows.Forms.Padding(4, 3, 0, 2);
+            this.SelectedQueuePath.Name = "SelectedQueuePath";
+            this.SelectedQueuePath.Overflow = System.Windows.Forms.ToolStripItemOverflow.Never;
+            this.SelectedQueuePath.Size = new System.Drawing.Size(102, 17);
+            this.SelectedQueuePath.Text = "SelectedQueue";
+            this.SelectedQueuePath.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.SelectedQueuePath.Visible = false;
+            // 
+            // SelectedMessageText
+            // 
+            this.SelectedMessageText.Image = global::MSMQExplorer.Properties.Resources.message;
+            this.SelectedMessageText.Margin = new System.Windows.Forms.Padding(6, 3, 0, 2);
+            this.SelectedMessageText.Name = "SelectedMessageText";
+            this.SelectedMessageText.Size = new System.Drawing.Size(134, 17);
+            this.SelectedMessageText.Text = "toolStripStatusLabel1";
+            this.SelectedMessageText.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.SelectedMessageText.Visible = false;
+            // 
+            // ProgressBar
+            // 
+            this.ProgressBar.Name = "ProgressBar";
+            this.ProgressBar.Size = new System.Drawing.Size(100, 16);
+            this.ProgressBar.Visible = false;
             // 
             // ToolBar
             // 
@@ -179,7 +303,8 @@
             this.toolStripLabel1,
             this.ServerName,
             this.RefreshButton,
-            this.toolStripSeparator1});
+            this.toolStripSeparator1,
+            this.Help});
             this.ToolBar.Location = new System.Drawing.Point(0, 0);
             this.ToolBar.Name = "ToolBar";
             this.ToolBar.Size = new System.Drawing.Size(876, 25);
@@ -189,14 +314,15 @@
             // toolStripLabel1
             // 
             this.toolStripLabel1.Name = "toolStripLabel1";
-            this.toolStripLabel1.Size = new System.Drawing.Size(42, 22);
-            this.toolStripLabel1.Text = "Server:";
+            this.toolStripLabel1.Size = new System.Drawing.Size(68, 22);
+            this.toolStripLabel1.Text = "Host name:";
             // 
             // ServerName
             // 
             this.ServerName.Name = "ServerName";
             this.ServerName.Size = new System.Drawing.Size(152, 25);
-            this.ServerName.Text = "localhost";
+            this.ServerName.ToolTipText = "Fully qualified host name of target machine.";
+            this.ServerName.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.ServerName_KeyPress);
             // 
             // RefreshButton
             // 
@@ -212,6 +338,15 @@
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
             this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
+            // 
+            // Help
+            // 
+            this.Help.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.Help.Image = global::MSMQExplorer.Properties.Resources._109_AllAnnotations_Help_16x16_72;
+            this.Help.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.Help.Name = "Help";
+            this.Help.Size = new System.Drawing.Size(23, 22);
+            this.Help.Text = "toolStripButton1";
             // 
             // MainForm
             // 
@@ -231,7 +366,10 @@
             this.splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
             this.splitContainer2.ResumeLayout(false);
+            this.ContextMenu.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.MessageEditor)).EndInit();
+            this.StatusBar.ResumeLayout(false);
+            this.StatusBar.PerformLayout();
             this.ToolBar.ResumeLayout(false);
             this.ToolBar.PerformLayout();
             this.ResumeLayout(false);
@@ -253,6 +391,20 @@
         private System.Windows.Forms.ToolStripLabel toolStripLabel1;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
         private System.Windows.Forms.ImageList Images;
+        private System.Windows.Forms.ContextMenuStrip ContextMenu;
+        private System.Windows.Forms.ToolStripMenuItem purgeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem removeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem deleteToolStripMenuItem;
+        private System.Windows.Forms.ToolStripButton Help;
+        private System.Windows.Forms.ToolStripStatusLabel SelectedQueuePath;
+        private System.Windows.Forms.ToolStripProgressBar ProgressBar;
+        private System.Windows.Forms.ToolStripStatusLabel SelectedMessageText;
+        private System.Windows.Forms.ToolStripMenuItem newToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
+        private System.Windows.Forms.ToolStripMenuItem createToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem cutToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem copyToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pasteToolStripMenuItem;
     }
 }
 

@@ -69,6 +69,7 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <Content Include="doc\MSMQExplorer.png" />
     <Content Include="lib\License.txt" />
     <Content Include="lib\ReadMe.htm" />
     <Content Include="lib\SciLexer.dll" />
@@ -76,6 +77,10 @@
     <Content Include="lib\ScintillaNET.dll" />
     <Content Include="lib\ScintillaNET.pdb" />
     <Content Include="lib\ScintillaNET.xml" />
+    <None Include="Resources\message.png" />
+    <None Include="Resources\Messages-002.png" />
+    <None Include="Resources\MessageQueuing-002.png" />
+    <None Include="Resources\109_AllAnnotations_Help_16x16_72.png" />
     <None Include="Resources\icon_refresh1.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

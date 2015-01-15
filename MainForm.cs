@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Messaging;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -24,10 +25,28 @@ namespace MSMQExplorer
         private Dictionary<string, int> QueueMessagesCount;
         private List<string> SelectedPath;
 
+        private MessageQueue SelectedQueue;
+        private System.Messaging.Message SelectedMessage;
+
+        private MessageQueue CopyQueue;
+        private System.Messaging.Message CopyMessage;
+        private TreeNode CopyNode;
+        private bool IsCut;
+
         #region .ctor
         public MainForm()
         {
             InitializeComponent();
+           
+            try
+            {
+                var entry = Dns.GetHostEntry(Environment.MachineName);
+                ServerName.Text = entry.HostName;
+            }
+            catch { }
+
+            if (string.IsNullOrWhiteSpace(ServerName.Text))
+                ServerName.Text = Environment.MachineName;
 
             Task.Factory.StartNew(
                 delegate()
@@ -38,57 +57,6 @@ namespace MSMQExplorer
         }
         #endregion
 
-
-        #region RefreshQueuesTree
-        private void RefreshQueuesTree()
-        {
-            QueuesTree.BeginUpdate();
-            try
-            {
-                QueuesTree.Nodes.Clear();
-
-                var node = GetPrivateQueuesTreeNode();
-                if (node != null) QueuesTree.Nodes.Add(node);
-
-                node = GetPublicQueuesTreeNode();
-                if (node != null) QueuesTree.Nodes.Add(node);                
-
-                node = GetSystemQueuesTreeNode();
-                if (node != null) QueuesTree.Nodes.Add(node);     
-           
-                if (SelectedPath != null)
-                {
-                    TreeNode selected = null;
-
-                    var nodes = QueuesTree.Nodes;
-                    foreach (var key in SelectedPath.AsEnumerable().Reverse())
-                    {
-                        var s = nodes.OfType<TreeNode>().Where(n => string.Equals(n.Name, key) || string.Equals(n.Text, key)).FirstOrDefault();
-                        if (s != null)
-                        {
-                            selected = s;
-                            selected.Expand();
-                            nodes = selected.Nodes;
-                        }
-                    }
-
-                    if (selected != null)
-                    {
-                        QueuesTree.SelectedNode = selected;
-                        selected.EnsureVisible();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-            finally
-            {
-                QueuesTree.EndUpdate();
-            }
-        }
-        #endregion
 
         #region GetPublicQueuesTreeNode
         private TreeNode GetPublicQueuesTreeNode()
@@ -204,6 +172,7 @@ namespace MSMQExplorer
         }
         #endregion
 
+
         #region ReloadQueues
         private void ReloadQueues(string server)
         {
@@ -288,44 +257,61 @@ namespace MSMQExplorer
         }
         #endregion
 
-        #region GetMessageCount
-        private int GetMessageCount(MessageQueue q)
+        #region RefreshQueuesTree
+        private void RefreshQueuesTree()
         {
+            QueuesTree.BeginUpdate();
             try
             {
-                var name = NormalizeQueueName(q.Path);
-                if (QueueMessagesCount.ContainsKey(name)) return QueueMessagesCount[name];
-            }
-            catch { }
+                QueuesTree.Nodes.Clear();
 
-            int count = 0;
+                SelectedQueue = null;
+                SelectedMessage = null;
+                CopyQueue = null;
+                CopyMessage = null;
+                CopyNode = null;
+                SelectItem(null);
 
-            q.MessageReadPropertyFilter.SetDefaults();
-            q.MessageReadPropertyFilter.Body = false;
+                var node = GetPrivateQueuesTreeNode();
+                if (node != null) QueuesTree.Nodes.Add(node);
 
-            var enumerator = q.GetMessageEnumerator2();
-            while (enumerator.MoveNext())
-            {
-                count++;
-            }
+                node = GetPublicQueuesTreeNode();
+                if (node != null) QueuesTree.Nodes.Add(node);
 
-            return count;
-        }
-        #endregion
+                node = GetSystemQueuesTreeNode();
+                if (node != null) QueuesTree.Nodes.Add(node);
 
-        #region NormalizeQueueName
-        private string NormalizeQueueName(string path)
-        {
-            if (path.StartsWith("FormatName:"))
-            {
-                var idx = path.IndexOf("private$");
-                if (idx >= 0)
+                if (SelectedPath != null)
                 {
-                    path = path.Substring(idx);
+                    TreeNode selected = null;
+
+                    var nodes = QueuesTree.Nodes;
+                    foreach (var key in SelectedPath.AsEnumerable().Reverse())
+                    {
+                        var s = nodes.OfType<TreeNode>().Where(n => string.Equals(n.Name, key) || string.Equals(n.Text, key)).FirstOrDefault();
+                        if (s != null)
+                        {
+                            selected = s;
+                            selected.Expand();
+                            nodes = selected.Nodes;
+                        }
+                    }
+
+                    if (selected != null)
+                    {
+                        QueuesTree.SelectedNode = selected;
+                        selected.EnsureVisible();
+                    }
                 }
             }
-
-            return path.Replace("\\", "/");
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                QueuesTree.EndUpdate();
+            }
         }
         #endregion
 
@@ -359,11 +345,11 @@ namespace MSMQExplorer
                     mq.MessageReadPropertyFilter.UseJournalQueue = true;
                     mq.MessageReadPropertyFilter.UseTracing = true;
 
-                    var enumerator = mq.GetMessageEnumerator2();                   
+                    var enumerator = mq.GetMessageEnumerator2();
                     while (enumerator.MoveNext())
                     {
                         var m = enumerator.Current;
-                        
+
                         var name = m.Label;
                         if (string.IsNullOrWhiteSpace(name)) name = m.Id;
 
@@ -380,6 +366,48 @@ namespace MSMQExplorer
                     Cursor = Cursors.Default;
                 }
             }
+        }
+        #endregion
+
+
+        #region GetMessageCount
+        private int GetMessageCount(MessageQueue q)
+        {
+            try
+            {
+                var name = NormalizeQueueName(q.Path);
+                if (QueueMessagesCount.ContainsKey(name)) return QueueMessagesCount[name];
+            }
+            catch { }
+
+            int count = 0;
+
+            q.MessageReadPropertyFilter.SetDefaults();
+            q.MessageReadPropertyFilter.Body = false;
+          
+            var enumerator = q.GetMessageEnumerator2();
+            while (enumerator.MoveNext())
+            {
+                count++;
+            }
+
+            return count;
+        }
+        #endregion
+
+        #region NormalizeQueueName
+        private string NormalizeQueueName(string path)
+        {
+            if (path.StartsWith("FormatName:"))
+            {
+                var idx = path.IndexOf("private$");
+                if (idx >= 0)
+                {
+                    path = path.Substring(idx);
+                }
+            }
+
+            return path.Replace("\\", "/");
         }
         #endregion
 
@@ -487,11 +515,84 @@ namespace MSMQExplorer
         }
         #endregion
 
+        #region SelectItem
+        private void SelectItem(object item)
+        {
+            SelectedQueue = null;
+            SelectedMessage = null;
+            SelectedPath = new List<string>();
+
+            if (item != null)
+            {
+                var node = item as TreeNode;
+                if (node != null)
+                {
+                    var sn = node;
+                    while (sn != null)
+                    {
+                        var key = sn.Name;
+                        if (string.IsNullOrWhiteSpace(key)) key = sn.Text;
+
+                        if (!string.IsNullOrWhiteSpace(key)) SelectedPath.Add(key);
+
+                        sn = sn.Parent;
+                    }
+
+                    if (node.Tag is MessageQueue) SelectedQueue = (MessageQueue)node.Tag;
+                    else if (node.Tag is System.Messaging.Message)
+                    {
+                        SelectedMessage = (System.Messaging.Message)node.Tag;
+                        SelectedQueue = (MessageQueue)node.Parent.Tag;
+                    }
+                }
+                else if (item is ListViewItem)
+                {
+                    SelectItem(((ListViewItem)item).Tag);
+                }
+            }
+
+            if (SelectedMessage != null)
+            {
+                SelectedMessageText.Visible = true;
+                SelectedMessageText.Text = string.IsNullOrWhiteSpace(SelectedMessage.Label) ? SelectedMessage.Id : SelectedMessage.Label;
+            }
+            else SelectedMessageText.Visible = false;
+            
+            if (SelectedQueue != null)
+            {
+                SelectedQueuePath.Visible = true;
+                SelectedQueuePath.Text = SelectedQueue.Path;
+            }
+            else SelectedQueuePath.Visible = false;
+        }
+        #endregion
+
+
         #region RefreshButton_Click
         private void RefreshButton_Click(object sender, EventArgs e)
         {
+            Cursor = Cursors.WaitCursor;
             try
             {
+                var hostname = "";
+                try
+                {
+                    var entry = Dns.GetHostEntry(ServerName.Text);
+                    hostname = entry.HostName;
+                }
+                catch { }
+
+                if (string.IsNullOrWhiteSpace(hostname))
+                {
+                    if (MessageBox.Show("Host name of remote machine can't be resolved.\nUsing host aliases can cause unexpected behaviour.", "Problem with host name", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.Cancel) return;
+                }
+                else if (!string.Equals(hostname, ServerName.Text))
+                {
+                    var dr = MessageBox.Show("Host name of remote machine is different from specified.\nUsing host aliases can cause unexpected behaviour.\nDo you want to use " + hostname + " instead?", "Problem with host name", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                    if (dr == DialogResult.Cancel) return;
+                    if (dr == DialogResult.Yes) ServerName.Text = hostname;
+                }
+               
                 ReloadQueues(ServerName.Text);
                 RefreshQueuesTree();
             }
@@ -499,25 +600,20 @@ namespace MSMQExplorer
             {
                 MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
         }
         #endregion
+
 
         #region QueuesTree_AfterSelect
         private void QueuesTree_AfterSelect(object sender, TreeViewEventArgs e)
         {
             try
             {
-                var sn = e.Node;
-                SelectedPath = new List<string>();
-                while (sn != null)
-                {
-                    var key = sn.Name;
-                    if (string.IsNullOrWhiteSpace(key)) key = sn.Text;
-
-                    if (!string.IsNullOrWhiteSpace(key)) SelectedPath.Add(key);
-
-                    sn = sn.Parent;
-                }
+                SelectItem(e.Node);
 
                 MessagesList.BeginUpdate();
                 try
@@ -664,6 +760,15 @@ namespace MSMQExplorer
         }
         #endregion
 
+        #region QueuesTree_MouseDown
+        private void QueuesTree_MouseDown(object sender, MouseEventArgs e)
+        {
+            var node = QueuesTree.GetNodeAt(e.Location);
+            if (node != null) QueuesTree.SelectedNode = node;
+        }
+        #endregion
+
+
         #region MessagesList_DoubleClick
         private void MessagesList_DoubleClick(object sender, EventArgs e)
         {
@@ -685,15 +790,13 @@ namespace MSMQExplorer
         }
         #endregion
 
+        #region MessagesList_SelectedIndexChanged
         private void MessagesList_SelectedIndexChanged(object sender, EventArgs e)
         {
             try
             {
-                if (MessagesList.SelectedItems.Count == 0) return;
-
-                var li = MessagesList.SelectedItems[0];
-                var node = li.Tag as TreeNode;
-                if (node == null) return;
+                if (MessagesList.SelectedItems.Count == 0) SelectItem(null);
+                else SelectItem(MessagesList.SelectedItems[0]);
 
                 MessageEditor.IsReadOnly = false;
                 try
@@ -701,13 +804,171 @@ namespace MSMQExplorer
                     MessageEditor.Scrolling.ScrollBy(-1, -1);
                     MessageEditor.Text = "";
 
-                    var m = node.Tag as System.Messaging.Message;
-                    if (m != null) RenderMessage(m);
+                    if (SelectedMessage != null) RenderMessage(SelectedMessage);
                 }
                 finally
                 {
                     MessageEditor.IsReadOnly = true;
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        #endregion
+
+
+        #region ServerName_KeyPress
+        private void ServerName_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)13)
+            {
+                RefreshButton_Click(sender, e);
+            }
+        }
+        #endregion
+
+
+        #region ContextMenu_Opening
+        private void ContextMenu_Opening(object sender, CancelEventArgs e)
+        {
+            if ((SelectedQueue == null) && (SelectedMessage == null))
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            purgeToolStripMenuItem.Visible = false;
+            createToolStripMenuItem.Visible = false;
+            deleteToolStripMenuItem.Visible = false;
+
+            newToolStripMenuItem.Visible = false;
+            removeToolStripMenuItem.Visible = false;
+            cutToolStripMenuItem.Visible = false;
+            copyToolStripMenuItem.Visible = false;
+            pasteToolStripMenuItem.Visible = false;
+
+            if (SelectedMessage != null)
+            {
+                //newToolStripMenuItem.Visible = true;
+                removeToolStripMenuItem.Visible = true;
+                cutToolStripMenuItem.Visible = true;
+                copyToolStripMenuItem.Visible = true;
+            }
+            else if (SelectedQueue != null)
+            {
+                purgeToolStripMenuItem.Visible = true;
+               // createToolStripMenuItem.Visible = true;
+               // deleteToolStripMenuItem.Visible = true;
+                pasteToolStripMenuItem.Visible = CopyMessage != null;
+            }
+        }
+        #endregion
+
+
+        #region purgeToolStripMenuItem_Click
+        private void purgeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SelectedQueue.Purge();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        #endregion
+
+        #region deleteToolStripMenuItem_Click
+        private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                MessageQueue.Delete(SelectedQueue.Path);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        #endregion
+
+        #region removeToolStripMenuItem_Click
+        private void removeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var m = SelectedQueue.ReceiveById(SelectedMessage.Id, TimeSpan.FromSeconds(3));               
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+        }
+        #endregion
+
+        private void cutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (CopyNode != null) CopyNode.ForeColor = Color.Black;
+
+                CopyQueue = SelectedQueue;
+                CopyMessage = SelectedMessage;
+                IsCut = true;
+
+                var node = QueuesTree.SelectedNode;
+                if ((node != null) && (node.Tag == CopyMessage)) node.ForeColor = Color.Gray;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (CopyNode != null) CopyNode.ForeColor = Color.Black;
+
+                CopyQueue = SelectedQueue;
+                CopyMessage = SelectedMessage;
+                IsCut = false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (CopyNode != null) CopyNode.ForeColor = Color.Black;
+
+                if ((CopyMessage != null) && (CopyQueue != null) && (SelectedQueue != null))
+                {
+                    if (IsCut)
+                    {
+                        var m = CopyQueue.ReceiveById(CopyMessage.Id, TimeSpan.FromSeconds(3));
+                        if (m == null)
+                        {
+                            // TODO:
+                        }
+                    }
+
+                    var body = new BinaryReader(CopyMessage.BodyStream).ReadBytes((int)CopyMessage.BodyStream.Length);
+                    SelectedQueue.Send(body);
+                }
+
+                CopyQueue = null;
+                CopyMessage = null;
+                IsCut = false;
             }
             catch (Exception ex)
             {
